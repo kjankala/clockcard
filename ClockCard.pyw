@@ -688,15 +688,15 @@ scr_wid = main.winfo_screenwidth()
 scr_heig = main.winfo_screenheight()
 scr_wid_default = 1920
 scr_heig_default = 1080
-r_wid = int(scr_wid/scr_wid_default)
-r_heig = int(scr_heig/scr_heig_default)
-geom['main'] = str(r_wid*208)+"x"+str(r_heig*300)
-geom['end_win'] = str(r_wid*218)+"x"+str(r_heig*120)
-geom['vac_win'] = str(r_wid*220)+"x"+str(r_heig*130)
-geom['stat_win'] = str(r_wid*750)+"x"+str(r_heig*450)
-geom['alldata_win'] = str(r_wid*500)+"x"+str(r_heig*470)
-geom['time_win'] = str(r_wid*218)+"x"+str(r_heig*120)
-geom['err_win'] = str(r_wid*218)+"x"+str(r_heig*120)
+r_wid = (scr_wid/scr_wid_default)*1.1
+r_heig = (scr_heig/scr_heig_default)*1.1
+geom['main'] = str(int(r_wid*208))+"x"+str(int(r_heig*300))
+geom['end_win'] = str(int(r_wid*218))+"x"+str(int(r_heig*120))
+geom['vac_win'] = str(int(r_wid*220))+"x"+str(int(r_heig*130))
+geom['stat_win'] = str(int(r_wid*750))+"x"+str(int(r_heig*450))
+geom['alldata_win'] = str(int(r_wid*500))+"x"+str(int(r_heig*470))
+geom['time_win'] = str(int(r_wid*218))+"x"+str(int(r_heig*120))
+geom['err_win'] = str(int(r_wid*218))+"x"+str(int(r_heig*120))
 
 mp=Panel(main)
 # Main loop
