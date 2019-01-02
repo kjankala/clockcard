@@ -33,33 +33,19 @@ version = "v0.43"
 
 # Dictionary to hold the present insert
 global data_curr
-data_curr = {'date':"",'start':"",'end':"",'sec':""}
-
-# Data array for all data
 global data_arr
-data_arr = []
 global data_vacation
-data_vacation = []
 global data_sick
-data_sick = []
-global txtbox_date_vac_start_ent
-
 global drive
-# Dictionary for box sizes (WxH)
 global geom
+data_curr = {'date':"",'start':"",'end':"",'sec':""}
+data_arr = []
+data_vacation = []
+data_sick = []
 geom = {'main':"",'end_win':"",'vac_win':"",'stat_win':"",'alldata_win':"",'time_win':"",'err_win':""}
 
-#geom = {\
-#'main':"208x300",\
-#'end_win':"218x120",\
-#'vac_win':"220x130",\
-#'stat_win':"750x450",\
-#'alldata_win':"500x470",\
-#'time_win':"218x120",\
-#'err_win':"218x120"}
-
 # Textbox width
-txtb_wid=10
+txtb_wid = 10
 
 default_start = dt.strptime(default_start,"%H:%M").time()
 default_end = dt.strptime(default_end,"%H:%M").time()
@@ -114,6 +100,10 @@ class Panel:
                 def cmnd2():
                     delete_line_sql(data_arr[-1]['id'])
                     end_win.destroy()
+                    try:
+                        os.remove(filename)
+                    except:
+                        pass
                     exit()
                 tk.Button(end_win,text="Delete insert",command=lambda : cmnd2(),bg="DarkOrange2",width=17,bd=2).\
                     grid(column=0,row=2,pady=(5,0),padx=(25,0),sticky='NW')
@@ -181,10 +171,6 @@ class Panel:
                 if date_is_ok:
                     con = sqlite3.connect(filename)
                     cur = con.cursor()
-                    try:
-                        cur.execute("CREATE TABLE data(ind INTEGER PRIMARY KEY,date TEXT,start TEXT,end TEXT,sec INT)")
-                    except:
-                        pass
 
                     if vac_or_sick == "vacation":
                         mark = -1 #-1 sec marks vacation
@@ -199,6 +185,13 @@ class Panel:
                         con.commit()
 
                     con.close()
+
+                    file_found = get_googledrive_file(filename,'save')
+
+                    try:
+                        os.remove(filename)
+                    except:
+                        pass
                     exit()
 
 
@@ -393,6 +386,10 @@ class Panel:
 
         # Button for exit
         def exit_click():
+            try:
+                os.remove(filename)
+            except:
+                pass
             exit()
         tk.Button(main,text="Exit",command=lambda : exit_click(),bg="DarkOrange2",width=10,bd=2)\
           .grid(column=0,row=9,pady=(5,0),padx=(12,0),sticky='NW')
@@ -500,10 +497,6 @@ class Panel:
             if all(is_ok):
                 con = sqlite3.connect(filename)
                 cur = con.cursor()
-                try:
-                    cur.execute("CREATE TABLE data(ind INTEGER PRIMARY KEY,date TEXT, start TEXT,end TEXT,sec INT)")
-                except:
-                    pass
 
                 if len(data_arr)>0 and data_arr[-1]['sec']==0:
                     f_str = """UPDATE data SET date="{date}", start="{start}",end="{end}",sec="{sec}" WHERE ind="{idx}" """
@@ -522,6 +515,13 @@ class Panel:
                 cur.execute(sql_com)
                 con.commit()
                 con.close()
+
+                file_found = get_googledrive_file(filename,'save')
+
+                try:
+                    os.remove(filename)
+                except:
+                    pass
                 exit()
 
 
@@ -576,21 +576,16 @@ def delete_line_sql(line):
 def read_data_sql():
     global data_arr, data_vacation, data_sick, drive
 
-    gauth = GoogleAuth()
-    gauth.LocalWebserverAuth()
-    drive = GoogleDrive(gauth)
+    file_found = get_googledrive_file(filename,'load')
 
-    # Auto-iterate through all files in the root folder.
-    file_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
-    file_found = False
-    for file in file_list:
-        if file['title'] == filename:
-            gd_file_id = file['id']
-            file_obj = drive.CreateFile({'id': gd_file_id})
-            file_obj.GetContentFile(filename)
-            file_found = True
-            break
-    file_list = None
+    if not file_found:
+        con = sqlite3.connect(filename)
+        cur = con.cursor()
+        cur.execute("CREATE TABLE data(ind INTEGER PRIMARY KEY,date TEXT, start TEXT,end TEXT,sec INT)")
+        con.commit()
+        con.close()
+        file_found = get_googledrive_file(filename,'save_new')
+        file_found = get_googledrive_file(filename,'load')
 
     if os.path.isfile(filename) and file_found:
         con = sqlite3.connect(filename)
@@ -609,6 +604,49 @@ def read_data_sql():
         data_vacation = [x['date'] for x in data_arr if x['sec'] == -1]
         data_sick = [x['date'] for x in data_arr if x['sec'] == -2]
 
+# Get file from Google GoogleDrive
+def get_googledrive_file(gd_filename,load_or_save):
+    #Get google drive authorization
+    gauth = GoogleAuth()
+    # Try to load saved client credentials
+    gauth.LoadCredentialsFile("mycreds.txt")
+    if gauth.credentials is None:
+        # Authenticate if they're not there
+        gauth.LocalWebserverAuth()
+    elif gauth.access_token_expired:
+        # Refresh them if expired
+        gauth.Refresh()
+    else:
+        # Initialize the saved creds
+        gauth.Authorize()
+    # Save the current credentials to a file
+    gauth.SaveCredentialsFile("mycreds.txt")
+
+    drive = GoogleDrive(gauth)
+
+    # Auto-iterate through all files in the root folder.
+    file_list = drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
+    file_found = False
+
+    if load_or_save == 'save_new':
+        file_obj = drive.CreateFile({'title': gd_filename})
+        file_obj.SetContentFile(filename)
+        file_obj.Upload()
+    else:
+        for file in file_list:
+            if file['title'] == gd_filename:
+                gd_file_id = file['id']
+                file_obj = drive.CreateFile({'id': gd_file_id})
+                if load_or_save == 'load':
+                    file_obj.GetContentFile(gd_filename)
+                elif load_or_save == 'save':
+                    file_obj.SetContentFile(filename)
+                    file_obj.Upload()
+                file_found = True
+                break
+
+    file_list = None
+    return file_found
 
 # General window to display errors
 def error_win(text):
@@ -620,7 +658,13 @@ def error_win(text):
     tk.Button(err_win,text="Return",command=err_win.destroy,bg="light blue",width=6,bd=2).\
         grid(column=0,row=1,pady=(0,0),padx=(60,0),sticky='NW')
     #  Click event exit
-    tk.Button(err_win,text="Exit",command=lambda : exit(),bg="DarkOrange2",width=6,bd=2).\
+    def exit_click():
+        try:
+            os.remove(filename)
+        except:
+            pass
+        exit()
+    tk.Button(err_win,text="Exit",command=exit_click(),bg="DarkOrange2",width=6,bd=2).\
         grid(column=0,row=2,pady=(0,0),padx=(60,0),sticky='NW')
 
 # Statistics array
@@ -703,20 +747,20 @@ def monthly_hours():
 
 main=tk.Tk()
 
-#Scale to the present screen
+#Scale to the present display
 scr_wid = main.winfo_screenwidth()
 scr_heig = main.winfo_screenheight()
 scr_wid_default = 1920
 scr_heig_default = 1080
-r_wid = int(scr_wid/scr_wid_default)
-r_heig = int(scr_heig/scr_heig_default)
-geom['main'] = str(r_wid*208)+"x"+str(r_heig*300)
-geom['end_win'] = str(r_wid*218)+"x"+str(r_heig*120)
-geom['vac_win'] = str(r_wid*220)+"x"+str(r_heig*130)
-geom['stat_win'] = str(r_wid*750)+"x"+str(r_heig*450)
-geom['alldata_win'] = str(r_wid*500)+"x"+str(r_heig*470)
-geom['time_win'] = str(r_wid*218)+"x"+str(r_heig*120)
-geom['err_win'] = str(r_wid*218)+"x"+str(r_heig*120)
+r_wid = (scr_wid/scr_wid_default)*1.1
+r_heig = (scr_heig/scr_heig_default)*1.1
+geom['main'] = str(int(r_wid*208))+"x"+str(int(r_heig*300))
+geom['end_win'] = str(int(r_wid*218))+"x"+str(int(r_heig*120))
+geom['vac_win'] = str(int(r_wid*220))+"x"+str(int(r_heig*130))
+geom['stat_win'] = str(int(r_wid*750))+"x"+str(int(r_heig*450))
+geom['alldata_win'] = str(int(r_wid*500))+"x"+str(int(r_heig*470))
+geom['time_win'] = str(int(r_wid*218))+"x"+str(int(r_heig*120))
+geom['err_win'] = str(int(r_wid*218))+"x"+str(int(r_heig*120))
 
 mp=Panel(main)
 # Main loop

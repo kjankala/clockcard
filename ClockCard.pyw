@@ -30,32 +30,16 @@ version = "v0.43"
 
 # Dictionary to hold the present insert
 global data_curr
-data_curr = {'date':"",'start':"",'end':"",'sec':""}
-
-# Data array for all data
 global data_arr
-data_arr = []
 global data_vacation
-data_vacation = []
 global data_sick
-data_sick = []
-global txtbox_date_vac_start_ent
-
-# Dictionary for box sizes (WxH)
 global geom
+data_curr = {'date':"",'start':"",'end':"",'sec':""}
+data_arr = []
+data_vacation = []
+data_sick = []
 geom = {'main':"",'end_win':"",'vac_win':"",'stat_win':"",'alldata_win':"",'time_win':"",'err_win':""}
-
-#geom = {\
-#'main':"208x300",\
-#'end_win':"218x120",\
-#'vac_win':"220x130",\
-#'stat_win':"750x450",\
-#'alldata_win':"500x470",\
-#'time_win':"218x120",\
-#'err_win':"218x120"}
-
-# Textbox width
-txtb_wid=10
+txtb_wid = 10
 
 default_start = dt.strptime(default_start,"%H:%M").time()
 default_end = dt.strptime(default_end,"%H:%M").time()
@@ -503,7 +487,8 @@ class Panel:
 
                 if len(data_arr)>0 and data_arr[-1]['sec']==0:
                     f_str = """UPDATE data SET date="{date}", start="{start}",end="{end}",sec="{sec}" WHERE ind="{idx}" """
-                    sql_com = f_str.format(idx=data_arr[-1]['id'],\
+                    sql_com = f_str.format(\
+                    idx=data_arr[-1]['id'],\
                     date=data_curr['date'].isoformat(),\
                     start=data_curr['start'].isoformat()[0:5],\
                     end=data_curr['end'].isoformat()[0:5],\
@@ -683,7 +668,7 @@ def monthly_hours():
 
 main=tk.Tk()
 
-#Scale to the present screen
+#Scale to the present display
 scr_wid = main.winfo_screenwidth()
 scr_heig = main.winfo_screenheight()
 scr_wid_default = 1920
